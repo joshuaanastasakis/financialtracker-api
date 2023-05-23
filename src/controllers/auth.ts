@@ -32,27 +32,23 @@ function getRandCode() {
     return currCode;
 }
 
-function emailExists(email:string) {
-    return USERS.findOne({ email: email }).length > 0;
+async function setRegistrationCode(id:number, code:string) {
+    return (await USERS.updateOne({ _id:id }, {$set: {registration_code: code}})).nModified===1 ? true : false;
 }
 
-function setRegistrationCode(id:number, code:string):boolean {
-    return USERS.updateOne({ _id:id }, {$set: {registration_code: code}}).nModified===1 ? true : false;
+async function removeRegistrationCode(id:number) {
+    return (await USERS.updateOne({ _id:id }, {$set: {registration_code: null}})).nModified===1 ? true : false;
+    
+}
+async function setLoginCode(id:number, code:string) {
+    return (await USERS.updateOne({ _id:id }, {$set: {login_code: code}})).nModified===1 ? true : false;
 }
 
-function removeRegistrationCode(id:number) {
-    return USERS.updateOne({ _id:id }, {$set: {registration_code: null}}).nModified===1 ? true : false;
+async function removeLoginCode(id:number) {
+    return (await USERS.updateOne({ _id:id }, {$set: {login_code: null}})).nModified===1 ? true : false;
 }
 
-function setLoginCode(id:number, code:string) {
-    return USERS.updateOne({ _id:id }, {$set: {login_code: code}}).nModified===1 ? true : false;
-}
-
-function removeLoginCode(id:number) {
-    return USERS.updateOne({ _id:id }, {$set: {login_code: null}}).nModified===1 ? true : false;
-}
-
-export function register_sendCode(req:Request, res:Response) {
+export async function register_sendCode(req:Request, res:Response) {
     /* get email and name */
     const { email, name } = req.body;
 
@@ -62,31 +58,36 @@ export function register_sendCode(req:Request, res:Response) {
     }
 
     /* validate email */
-
-    /* check if user with email already exists (email will be unique key) */
-    if (emailExists(email)) {
-        return res.status(400).json({ success:false, error:"user with this email already exists" })
-    }
-
+    
     /* generate random code */
     const registration_code = getRandCode();
     console.log(`Registration code: ${registration_code}`);
 
-    /* Add registration_code to mongodb */
-    USERS.insertOne({
-        name: name,
-        email: email,
-        registration_code: registration_code,
-        registered: false,
-    })
-    .then((doc:Document) => {
-        console.log(doc);
-    })
-    .catch((err:Error) => console.error(err));
+    /* check if user with email already exists (email will be unique key) */
+    const emailExists = await USERS.findOne({ email: email, isRegistered: false });
+    if (emailExists) {
+        console.log("Found email");
+        const update = await USERS.updateOne({
+            email: email,
+        }, {
+            $set: {registration_code: registration_code}
+        });
+    } else {
+        /* Add registration_code to mongodb */
+        USERS.insertOne({
+            name: name,
+            email: email,
+            registration_code: registration_code,
+            isRegistered: false,
+        })
+        .then((doc:Document) => {
+            console.log(doc);
+        })
+        .catch((err:Error) => console.error(err));
+    }
 
-    // if (insert.nInserted!==1) {
-    //     return res.status(400).json({ success:false, error:"something went wrong, please try again" })
-    // }
+    
+
 
     /* send registration confirmation pin via email */
     // mail(email, registration_code);
@@ -94,19 +95,44 @@ export function register_sendCode(req:Request, res:Response) {
     return res.status(200).json({ success:true, msg:`Code was sent to ${email}` })
 }
 
-// export function register_confirmCode(req:Request, res:Response) {
-//     const { email, code } = req.body;
-//     if (email && code && code===registration_code) {
-//         // save user info to database
-        
-//         // reset registration code
-//         registration_code=getRandCode();
-//         return res.status(200).json({ success:true, msg:"code match successful" })
-//     } else {
-//         return res.status(400).json({ success:false, error:"code is incorrect" })
-//     }
+export async function register_confirmCode(req:Request, res:Response) {
+    const { email, code } = req.body;
+    console.log(`Received email ${email} and code ${code}`)
+
+    if (!email || !code) {
+        return res.status(400).json({ success:false, error:"missing email and/or code" })
+    }
+
+    /* check if user exists and check code */
+    const userExists = await USERS.findOne({ 
+        email: email,
+        registration_code: code, 
+        isRegistered: false,
+    });
+    if (!userExists) {
+        console.log("Found email");
+        return res.status(400).json({ success:false, error:"code is incorrect" });
+    }
+
+    const update = await USERS.updateOne({
+        email: email,
+        registration_code: code,
+        isRegistered: false,
+    }, {
+        $set: {registration_code: null, isRegistered: true}
+    });
+
+    console.log(update);
+
+    // if (update.nModified === 0) {
+    //     return res.status(200).json({ success:true, msg:"code match successful" })
+    // } else {
+    //     return res.status(400).json({ success:false, error:"something went wrong" })
+    // }
+
+    return res.status(200).json({ success:true, msg:"code match successful" })
     
-// }
+}
 
 export function login(req:Request, res:Response) {
     const { email } = req.body;

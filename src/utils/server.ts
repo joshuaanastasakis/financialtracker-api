@@ -22,7 +22,7 @@ import {
 
 import { 
     register_sendCode,
-    // register_confirmCode,
+    register_confirmCode,
     login
 } from '../controllers/auth';
 
@@ -53,7 +53,7 @@ export async function createServer(): Promise<Express> {
     .post(register_sendCode);
 
     server.route('/register/confirm')
-    // .post(register_confirmCode);
+    .post(register_confirmCode);
 
     server.route('/transactions')
     .get(getTransactions)
