@@ -63,6 +63,12 @@ export async function register_sendCode(req:Request, res:Response) {
     const registration_code = getRandCode();
     console.log(`Registration code: ${registration_code}`);
 
+    const registeredUserExists = await USERS.findOne({ email: email, isRegistered: true });
+    if (registeredUserExists) {
+        console.log("Registered user already exists");
+        return res.status(400).json({ success:false, error:"user with this email already exists" });
+    }
+
     /* check if user with email already exists (email will be unique key) */
     const emailExists = await USERS.findOne({ email: email, isRegistered: false });
     if (emailExists) {
@@ -86,7 +92,8 @@ export async function register_sendCode(req:Request, res:Response) {
         .catch((err:Error) => console.error(err));
     }
 
-    
+    // public: abammtgq
+    // private: a45c206c-2876-4dfd-bd9e-54f30f94e0f1
 
 
     /* send registration confirmation pin via email */
@@ -134,7 +141,7 @@ export async function register_confirmCode(req:Request, res:Response) {
     
 }
 
-export function login(req:Request, res:Response) {
+export function login_sendCode(req:Request, res:Response) {
     const { email } = req.body;
     if (!email) {
         return res.status(400).json({success: false, error: "Enter valid credentials"});

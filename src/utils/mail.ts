@@ -6,13 +6,13 @@ export function mail (email:string, message:string)  {
     var transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: process.env.GMAIL_EMAIL,
-            pass: process.env.GMAIL_PASSWORD
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
         }
     });
 
     var mailOptions = {
-        from: process.env.GMAIL_EMAIL,
+        from: process.env.EMAIL_USER,
         to: email,
         subject: 'EMAIL CONFIRMATION',
         text: `Financial Tracker Confirmation PIN is:\n\n${message}`
