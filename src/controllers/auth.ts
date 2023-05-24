@@ -92,10 +92,6 @@ export async function register_sendCode(req:Request, res:Response) {
         .catch((err:Error) => console.error(err));
     }
 
-    // public: abammtgq
-    // private: a45c206c-2876-4dfd-bd9e-54f30f94e0f1
-
-
     /* send registration confirmation pin via email */
     // mail(email, registration_code);
 
